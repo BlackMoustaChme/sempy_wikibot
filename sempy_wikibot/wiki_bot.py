@@ -10,9 +10,13 @@ from tokens import token
 
 # Messages
 
+lang = ""
+checklist_eng = {'Eng', 'ENG', 'EN', 'en', 'English', 'english', 'En', 'англ', 'Англ', 'Английский', 'английский'}
+checklist_ru = {'Rus', 'RUS', 'RU', 'ru', 'Russian', 'russian', 'Ru', 'рус', 'Рус', 'Русский', 'русский'}
+
 
 FIND_OUT_MORE = '\n\n Find out more at '
-HELP_MESSAGE = 'To wiki: \n\n /wiki [search input] \n\n To get random article from wikipedia: \n\n /random_wiki \n\n'
+HELP_MESSAGE = 'To wiki: \n\n /wiki [search input] \n\n To get random article from wikipedia: \n\n /random_wiki \n\n To get current language: \n\n /get_lang \n\n To set new language:  \n\n /set_lang [input language]'
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -38,6 +42,34 @@ def start(update, context):
 def help(update, context):
     update.message.reply_text('Sending help now \U0001F60A \n\n' + HELP_MESSAGE)
 
+def get_lang(update, context):
+    global lang
+    if lang == "en":
+        update.message.reply_text('Current language: English')
+    elif lang == "":
+        update.message.reply_text('Current language: English')
+    elif lang == "ru":
+        update.message.reply_text('Текущий язык: Русский')
+
+def set_lang(update, context):
+    global lang
+    global checklist_eng
+    global checklist_ru
+    # user_input = update.message.text
+    user_input = re.match("\/set_lang([@_\w]+|) (.+)", update.message.text).group(2)
+    if user_input in checklist_eng:
+        lang = "en"
+    elif user_input in checklist_ru:
+        lang = "ru"
+    # if user_input == "english":
+    #     lang = "en"
+    # elif user_input == "en":
+    #     lang = "en"
+    # elif user_input == "русский":
+    #     lang = "ru"
+    # elif user_input == "ru":
+    #     lang = "ru"
+
 
 def callback_handler(update, context):
     query = update.callback_query
@@ -55,6 +87,9 @@ def callback_handler(update, context):
 
 
 def wiki(update, context):
+    global lang
+    wikipedia.set_lang(lang)
+    #print(wikipedia.languages())
     user_input = re.match("\/wiki([@_\w]+|) (.+)", update.message.text).group(2)
     try:
         page_result = wikipedia.page(user_input)
@@ -85,6 +120,8 @@ def wiki(update, context):
 
 
 def random_wiki(update, context):
+    global lang
+    wikipedia.set_lang(lang)
     user_input = wikipedia.random(pages=1)
     try:
         page_result = wikipedia.page(user_input)
@@ -130,6 +167,8 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("wiki", wiki))
     dp.add_handler(CommandHandler("random_wiki", random_wiki))
+    dp.add_handler(CommandHandler("get_lang", get_lang))
+    dp.add_handler(CommandHandler("set_lang", set_lang))
     updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler))
 
     dp.add_error_handler(error)
