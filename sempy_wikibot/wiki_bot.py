@@ -1,6 +1,6 @@
 import logging
 import re
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, keyboardbutton
 import wikipedia
 from telegram.ext import Updater, CommandHandler, Filters, CallbackQueryHandler
 from tokens import token
@@ -10,13 +10,13 @@ from tokens import token
 
 # Messages
 
-lang = ""
-checklist_eng = {'Eng', 'ENG', 'EN', 'en', 'English', 'english', 'En', 'англ', 'Англ', 'Английский', 'английский'}
-checklist_ru = {'Rus', 'RUS', 'RU', 'ru', 'Russian', 'russian', 'Ru', 'рус', 'Рус', 'Русский', 'русский'}
+lang = "en"
+checklist_eng = {'Eng', 'eng', 'ENG', 'EN', 'en', 'English', 'english', 'En', 'англ', 'Англ', 'Английский', 'английский'}
+checklist_ru = {'Rus', 'rus', 'RUS', 'RU', 'ru', 'Russian', 'russian', 'Ru', 'рус', 'Рус', 'Русский', 'русский'}
 
 
 FIND_OUT_MORE = '\n\n Find out more at '
-HELP_MESSAGE = 'To wiki: \n\n /wiki [search input] \n\n To get random article from wikipedia: \n\n /random_wiki \n\n To get current language: \n\n /get_lang \n\n To set new language:  \n\n /set_lang [input language]'
+HELP_MESSAGE = 'To wiki: \n\n /wiki [search input] \n\n To get random article from wikipedia: \n\n /random_wiki \n\n To get current language: \n\n /getlang \n\n To set new language:  \n\n /setlang [input language]'
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -46,8 +46,8 @@ def get_lang(update, context):
     global lang
     if lang == "en":
         update.message.reply_text('Current language: English')
-    elif lang == "":
-        update.message.reply_text('Current language: English')
+    # elif lang == "":
+    #     update.message.reply_text('Current language: English')
     elif lang == "ru":
         update.message.reply_text('Текущий язык: Русский')
 
@@ -56,7 +56,7 @@ def set_lang(update, context):
     global checklist_eng
     global checklist_ru
     # user_input = update.message.text
-    user_input = re.match("\/set_lang([@_\w]+|) (.+)", update.message.text).group(2)
+    user_input = re.match("\/setlang([@_\w]+|) (.+)", update.message.text, flags=re.IGNORECASE).group(2)
     if user_input in checklist_eng:
         lang = "en"
     elif user_input in checklist_ru:
@@ -167,8 +167,8 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("wiki", wiki))
     dp.add_handler(CommandHandler("random_wiki", random_wiki))
-    dp.add_handler(CommandHandler("get_lang", get_lang))
-    dp.add_handler(CommandHandler("set_lang", set_lang))
+    dp.add_handler(CommandHandler("getlang", get_lang))
+    dp.add_handler(CommandHandler("setlang", set_lang))
     updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler))
 
     dp.add_error_handler(error)
