@@ -1,6 +1,9 @@
 import logging
 import re
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, User
+import xlsxwriter
+import datetime as dt
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, User, Update, \
+    Message
 import wikipedia
 from telegram.ext import Updater, CommandHandler, Filters, CallbackQueryHandler, MessageHandler, CallbackContext
 from tokens import token
@@ -11,6 +14,7 @@ from tokens import token
 # Messages
 
 lang = "en"
+count = 1
 checklist_eng = {'Eng', 'eng', 'ENG', 'EN', 'en', 'English', 'english', 'En', 'англ', 'Англ', 'Английский',
                  'английский'}
 checklist_ru = {'Rus', 'rus', 'RUS', 'RU', 'ru', 'Russian', 'russian', 'Ru', 'рус', 'Рус', 'Русский', 'русский'}
@@ -25,6 +29,20 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 
+def create_workbook(user_id):
+    workbook = xlsxwriter.Workbook(f'{user_id}.xlsx')
+    worksheet = workbook.add_worksheet()
+
+    worksheet.write(0, 0, "Дата")
+    worksheet.write(0, 1, "Время")
+    worksheet.write(0, 2, "Вид сообщения")
+    worksheet.write(0, 3, "Отправитель")
+    worksheet.write(0, 4, "ID отправителя")
+    worksheet.write(0, 5, "Сообщение")
+
+    return worksheet
+
+
 def create_disambiguation_keyboard(disambiguation_options):
     keyboard = []
 
@@ -37,6 +55,7 @@ def create_disambiguation_keyboard(disambiguation_options):
 
 def start(update, context):
     update.message.reply_text('Hi there! \U0001F60A \n\n' + HELP_MESSAGE)
+    # Message.from_user(User.id)
 
 
 def help(update, context):
@@ -98,54 +117,25 @@ def set_lang(update, context):
     global lang
     global checklist_eng
     global checklist_ru
-    eng_lang_button = KeyboardButton(text='/Eng')
-    rus_lang_button = KeyboardButton(text='/Rus',)
+    eng_lang_button = KeyboardButton(text='Eng')
+    rus_lang_button = KeyboardButton(text='Rus', )
     keyboard_array = [[eng_lang_button, rus_lang_button]]
     reply_markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, keyboard=keyboard_array)
     update.message.reply_text('Choose language for searching', reply_markup=reply_markup)
-    # user_input = update.message.text
-    # user_input = re.match("\/setlang([@_\w]+|) (.+)", update.message.text, flags=re.IGNORECASE).group(2)
-    # if user_input in checklist_eng:
-    #     lang = "en"
-    # elif user_input in checklist_ru:
-    #     lang = "ru"
-    # # if user_input == "english":
-    #     lang = "en"
-    # elif user_input == "en":
-    #     lang = "en"
-    # elif user_input == "русский":
-    #     lang = "ru"
-    # elif user_input == "ru":
-    #     lang = "ru"
 
 
-def eng(update, context):
+def eng(update: Update, context: CallbackContext):
     global lang
     # user_input = query.data
     lang = "en"
     update.message.reply_text("Selected language: Eng")
 
 
-def rus(update, context):
+def rus(update: Update, context: CallbackContext):
     global lang
     # user_input = query.data
     lang = "ru"
     update.message.reply_text("Selected language: Rus")
-
-
-# def rus(update, context):
-#     global lang
-#     query = update.callback_query
-#     callback_data = query.data
-#     # user_input = query.data
-#     try:
-#         if 'Rus' in callback_data:
-#             lang = "ru"
-#             query.edit_message_text(text=f"Selected language: {query.data}")
-#     except:
-#         query.edit_message_text(text="Whut? An unprecedented error has occurred.")
-#     # lang = "ru"
-    # query.edit_message_text(text=f"Selected language: {query.data}")
 
 
 def callback_handler(update, context):
@@ -167,7 +157,7 @@ def wiki(update, context):
     global lang
     wikipedia.set_lang(lang)
     # print(wikipedia.languages())
-    user_input = re.match("\/wiki([@_\w]+|) (.+)", update.message.text).group(2)
+    user_input = re.match(r"\/wiki([@_\w]+|) (.+)", update.message.text).group(2)
     try:
         page_result = wikipedia.page(user_input)
         summary = page_result.summary
@@ -232,6 +222,21 @@ def error(update, context):
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 
+def log(update: Update, context):
+    print("Hi")
+    print(Message.from_user)
+    global count
+    worksheet = create_workbook(Message.from_user)
+    print("Hi")
+    worksheet.write(count, 0, str(dt.datetime.now().date()))
+    worksheet.write(count, 1, str(dt.datetime.now().time()[0:0]))
+    worksheet.write(count, 2, "Текст")
+    worksheet.write(count, 3, Message.from_user(User.first_name) + '  ' + Message.from_user(User.last_name))
+    worksheet.write(count, 4, Message.from_user(User.id))
+    worksheet.write(count, 5, update.message.text)
+    count += 1
+
+
 def main():
     updater = Updater(token.TG_TOKEN, use_context=True)
 
@@ -240,17 +245,26 @@ def main():
 
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(CommandHandler("wiki", wiki))
-    dp.add_handler(CommandHandler("random_wiki", random_wiki))
-    dp.add_handler(CommandHandler("getlang", get_lang))
-    dp.add_handler(CommandHandler("setlang", set_lang))
-    dp.add_handler(CommandHandler("Eng", eng))
-    dp.add_handler(CommandHandler("Rus", rus))
+    dp.add_handler(MessageHandler(Filters.regex(re.compile(r'start', re.IGNORECASE)), start))
+    dp.add_handler(MessageHandler(Filters.regex(re.compile(r'help', re.IGNORECASE)), help))
+    # dp.add_handler(MessageHandler(Filters.regex(re.compile(r'wiki', re.IGNORECASE)), wiki))
+    dp.add_handler(MessageHandler(Filters.regex(re.compile(r'random_wiki', re.IGNORECASE)), random_wiki))
+    dp.add_handler(MessageHandler(Filters.regex(re.compile(r'getlang', re.IGNORECASE)), get_lang))
+    dp.add_handler(MessageHandler(Filters.regex(re.compile(r'setlang', re.IGNORECASE)), set_lang))
+    dp.add_handler(MessageHandler(Filters.regex("Eng"), eng))
+    dp.add_handler(MessageHandler(Filters.regex("Rus"), rus))
+    dp.add_handler(MessageHandler(Filters.regex("log"), log))
 
-    # updater.dispatcher.add_handler(CallbackQueryHandler(eng))
-    # updater.dispatcher.add_handler(CallbackQueryHandler(rus))
+    '''Old ver'''
+    # dp.add_handler(CommandHandler("start", start))
+    # dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("wiki", wiki))
+    # dp.add_handler(CommandHandler("random_wiki", random_wiki))
+    # dp.add_handler(CommandHandler("getlang", get_lang))
+    # dp.add_handler(CommandHandler("setlang", set_lang))
+    # dp.add_handler(CommandHandler("Eng", eng))
+    # dp.add_handler(CommandHandler("Rus", rus))
+
     updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler))
 
     dp.add_error_handler(error)
@@ -262,11 +276,16 @@ def main():
     updater.start_polling()
 
     updater.idle()
-    log_file = f"{User.id}.log"
-    with open (log_file, "wb") as file:
-        file.write()
+
+    # print('Hi')
+
+    # log_file = f'{User.id}.txt'
+    # with open(log_file, "wb") as file:
+    #     file.write(User.id)
+
 
 if __name__ == '__main__':
     print("Starting bot...")
     main()
+
     print("Bot stopped.")
