@@ -1,8 +1,8 @@
 import logging
 import re
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, keyboardbutton
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, User
 import wikipedia
-from telegram.ext import Updater, CommandHandler, Filters, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler, Filters, CallbackQueryHandler, MessageHandler, CallbackContext
 from tokens import token
 
 # import keyboards.disambiguation_keyboard as dkb
@@ -11,12 +11,12 @@ from tokens import token
 # Messages
 
 lang = "en"
-checklist_eng = {'Eng', 'eng', 'ENG', 'EN', 'en', 'English', 'english', 'En', 'англ', 'Англ', 'Английский', 'английский'}
+checklist_eng = {'Eng', 'eng', 'ENG', 'EN', 'en', 'English', 'english', 'En', 'англ', 'Англ', 'Английский',
+                 'английский'}
 checklist_ru = {'Rus', 'rus', 'RUS', 'RU', 'ru', 'Russian', 'russian', 'Ru', 'рус', 'Рус', 'Русский', 'русский'}
 
-
 FIND_OUT_MORE = '\n\n Find out more at '
-HELP_MESSAGE = 'To wiki: \n\n /wiki [search input] \n\n To get random article from wikipedia: \n\n /random_wiki \n\n To get current language: \n\n /getlang \n\n To set new language:  \n\n /setlang [input language]'
+HELP_MESSAGE = 'To wiki: \n\n /wiki [search input] \n\n To get random article from wikipedia: \n\n /random_wiki \n\n To get current language: \n\n /getlang \n\n To set new language:  \n\n /setlang'
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -42,6 +42,7 @@ def start(update, context):
 def help(update, context):
     update.message.reply_text('Sending help now \U0001F60A \n\n' + HELP_MESSAGE)
 
+
 def get_lang(update, context):
     global lang
     if lang == "en":
@@ -51,17 +52,64 @@ def get_lang(update, context):
     elif lang == "ru":
         update.message.reply_text('Текущий язык: Русский')
 
+
+# async def set_lang(update, context):
+#     global lang
+#     global checklist_eng
+#     global checklist_ru
+#     eng_lang_button = KeyboardButton('Eng')
+#     rus_lang_button = KeyboardButton('Rus')
+#     keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(eng_lang_button, rus_lang_button)
+#     await update.message.reply_text('Choose language for searching', reply_markup=keyboard)
+#     # user_input = update.message.text
+#     # user_input = re.match("\/setlang([@_\w]+|) (.+)", update.message.text, flags=re.IGNORECASE).group(2)
+#     # if user_input in checklist_eng:
+#     #     lang = "en"
+#     # elif user_input in checklist_ru:
+#     #     lang = "ru"
+#     # # if user_input == "english":
+#     #     lang = "en"
+#     # elif user_input == "en":
+#     #     lang = "en"
+#     # elif user_input == "русский":
+#     #     lang = "ru"
+#     # elif user_input == "ru":
+#     #     lang = "ru"
+#
+# async def eng(update, context):
+#     global lang
+#     query = update.callback_query
+#     # user_input = query.data
+#     lang = "en"
+#     await query.answer()
+#
+#     await query.edit_message_text(text=f"Selected language: {query.data}")
+#
+# async def rus(update, context):
+#     global lang
+#     query = update.callback_query
+#     # user_input = query.data
+#     lang = "ru"
+#     await query.answer()
+#
+#     await query.edit_message_text(text=f"Selected language: {query.data}")
+
 def set_lang(update, context):
     global lang
     global checklist_eng
     global checklist_ru
+    eng_lang_button = KeyboardButton(text='/Eng')
+    rus_lang_button = KeyboardButton(text='/Rus',)
+    keyboard_array = [[eng_lang_button, rus_lang_button]]
+    reply_markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, keyboard=keyboard_array)
+    update.message.reply_text('Choose language for searching', reply_markup=reply_markup)
     # user_input = update.message.text
-    user_input = re.match("\/setlang([@_\w]+|) (.+)", update.message.text, flags=re.IGNORECASE).group(2)
-    if user_input in checklist_eng:
-        lang = "en"
-    elif user_input in checklist_ru:
-        lang = "ru"
-    # if user_input == "english":
+    # user_input = re.match("\/setlang([@_\w]+|) (.+)", update.message.text, flags=re.IGNORECASE).group(2)
+    # if user_input in checklist_eng:
+    #     lang = "en"
+    # elif user_input in checklist_ru:
+    #     lang = "ru"
+    # # if user_input == "english":
     #     lang = "en"
     # elif user_input == "en":
     #     lang = "en"
@@ -69,6 +117,35 @@ def set_lang(update, context):
     #     lang = "ru"
     # elif user_input == "ru":
     #     lang = "ru"
+
+
+def eng(update, context):
+    global lang
+    # user_input = query.data
+    lang = "en"
+    update.message.reply_text("Selected language: Eng")
+
+
+def rus(update, context):
+    global lang
+    # user_input = query.data
+    lang = "ru"
+    update.message.reply_text("Selected language: Rus")
+
+
+# def rus(update, context):
+#     global lang
+#     query = update.callback_query
+#     callback_data = query.data
+#     # user_input = query.data
+#     try:
+#         if 'Rus' in callback_data:
+#             lang = "ru"
+#             query.edit_message_text(text=f"Selected language: {query.data}")
+#     except:
+#         query.edit_message_text(text="Whut? An unprecedented error has occurred.")
+#     # lang = "ru"
+    # query.edit_message_text(text=f"Selected language: {query.data}")
 
 
 def callback_handler(update, context):
@@ -89,7 +166,7 @@ def callback_handler(update, context):
 def wiki(update, context):
     global lang
     wikipedia.set_lang(lang)
-    #print(wikipedia.languages())
+    # print(wikipedia.languages())
     user_input = re.match("\/wiki([@_\w]+|) (.+)", update.message.text).group(2)
     try:
         page_result = wikipedia.page(user_input)
@@ -169,6 +246,11 @@ def main():
     dp.add_handler(CommandHandler("random_wiki", random_wiki))
     dp.add_handler(CommandHandler("getlang", get_lang))
     dp.add_handler(CommandHandler("setlang", set_lang))
+    dp.add_handler(CommandHandler("Eng", eng))
+    dp.add_handler(CommandHandler("Rus", rus))
+
+    # updater.dispatcher.add_handler(CallbackQueryHandler(eng))
+    # updater.dispatcher.add_handler(CallbackQueryHandler(rus))
     updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler))
 
     dp.add_error_handler(error)
@@ -180,7 +262,9 @@ def main():
     updater.start_polling()
 
     updater.idle()
-
+    log_file = f"{User.id}.log"
+    with open (log_file, "wb") as file:
+        file.write()
 
 if __name__ == '__main__':
     print("Starting bot...")
